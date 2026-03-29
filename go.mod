@@ -1,4 +1,4 @@
-module github.com/traefik/pluginproviderdemo
+module github.com/markuspi/traefik-cone
 
 go 1.19
 

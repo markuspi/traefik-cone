@@ -1,0 +1,22 @@
+http:
+  routers:
+    protected-router:
+      rule: Host(`127.0.0.1`)
+      service: protected-service
+      middlewares:
+        - middleware@plugin-traefik-cone
+
+    traefik-dashboard:
+      rule: Host(`127.0.0.2`)
+      service: api@internal
+
+    traefik-cone:
+      rule: Host(`127.0.0.3`)
+      service: service@plugin-traefik-cone
+
+
+  services:
+    protected-service:
+      loadBalancer:
+        servers:
+          - url: http://whoami

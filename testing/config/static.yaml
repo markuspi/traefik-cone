@@ -1,0 +1,19 @@
+experimental:
+  localPlugins:
+    traefik-cone:
+      moduleName: github.com/markuspi/traefik-cone
+
+api:
+  dashboard: true
+
+providers:
+  plugin:
+    traefik-cone:
+      expiration: 24h
+  file:
+    directory: /config/dynamic
+
+entrypoints:
+  web:
+    address: ":80"
+    asDefault: true

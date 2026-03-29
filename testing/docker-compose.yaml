@@ -1,0 +1,12 @@
+services:
+  traefik:
+    image: traefik:v3.6
+    ports:
+      - "80:80"
+    command: "--configFile=/config/static.yaml"
+    volumes:
+      - ..:/plugins-local/src/github.com/markuspi/traefik-cone
+      - ./config:/config
+
+  whoami:
+    image: traefik/whoami

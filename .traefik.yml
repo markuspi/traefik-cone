@@ -1,10 +1,10 @@
-displayName: Provider Plugin Demo
+displayName: Traefik Cone
 type: provider
 iconPath: .assets/icon.png
 
-import: github.com/traefik/pluginproviderdemo
+import: github.com/markuspi/traefik-cone
 
-summary: '[Demo] Simple Provider Plugin'
+summary: "Dynamic allowlisting of IPs for HTTP and TCP"
 
 testData:
-  pollInterval: 5s
+  expiration: 5s
