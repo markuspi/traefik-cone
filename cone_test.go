@@ -5,11 +5,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/traefik/genconf/dynamic"
 	"github.com/markuspi/traefik-cone"
+	"github.com/traefik/genconf/dynamic"
 )
 
 func TestProviderGeneratesConfigurationAndUpdatesAllowlist(t *testing.T) {
@@ -122,6 +124,72 @@ func TestProviderGeneratesConfigurationAndUpdatesAllowlist(t *testing.T) {
 
 	if !contains(mw2.IPWhiteList.SourceRange, newIP) {
 		t.Fatalf("expected updated allowlist to contain %s, got %v", newIP, mw2.IPWhiteList.SourceRange)
+	}
+}
+
+func TestProviderPersistsAllowlistToFile(t *testing.T) {
+	config := traefik_cone.CreateConfig()
+	config.Expiration = "1s"
+	f, err := os.CreateTemp("", "traefik-cone-*.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.Close()
+	defer os.Remove(f.Name())
+	config.PersistenceFilepath = f.Name()
+
+	provider, err := traefik_cone.New(context.Background(), config, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer provider.Stop()
+
+	if err := provider.Init(); err != nil {
+		t.Fatal(err)
+	}
+
+	cfgChan := make(chan json.Marshaler)
+	if err := provider.Provide(cfgChan); err != nil {
+		t.Fatal(err)
+	}
+
+	// wait initial config and then add IP
+	var payload *dynamic.JSONPayload
+	select {
+	case m := <-cfgChan:
+		payload = m.(*dynamic.JSONPayload)
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for initial configuration")
+	}
+
+	newIP := "4.5.6.7"
+	req, err := http.NewRequest("GET", payload.Configuration.HTTP.Services["service"].LoadBalancer.Servers[0].URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("X-Real-IP", newIP)
+
+	client := &http.Client{Timeout: 2 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp.Body.Close()
+
+	// wait for update
+	select {
+	case <-cfgChan:
+	case <-time.After(2 * time.Second):
+		t.Fatal("timeout waiting for updated configuration")
+	}
+
+	// verify file includes new IP
+	data, err := os.ReadFile(f.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), newIP) {
+		t.Fatalf("expected persisted file to contain %s, got %s", newIP, string(data))
 	}
 }
 

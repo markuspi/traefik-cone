@@ -10,6 +10,7 @@ providers:
   plugin:
     traefik-cone:
       expiration: 24h
+      persistenceFilepath: /tmp/traefik-cone.json
   file:
     directory: /config/dynamic
 

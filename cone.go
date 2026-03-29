@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"sort"
 	"time"
 
@@ -18,6 +19,8 @@ import (
 type Config struct {
 	// Expiration is the duration after which an allowlist IP expires.
 	Expiration string `json:"expiration,omitempty"`
+	// PersistenceFilepath is the optional path where the allowlist is persisted.
+	PersistenceFilepath string `json:"persistenceFilepath,omitempty"`
 }
 
 // CreateConfig creates the default plugin configuration.
@@ -33,9 +36,16 @@ type Provider struct {
 	server     *http.Server
 	serverAddr string
 	// Map from ip to expiration time. If time is nil, the entry never expires.
-	allowList     map[string]*time.Time
-	allowListChan chan string
-	expiration    time.Duration
+	allowList           map[string]*time.Time
+	allowListChan       chan string
+	expiration          time.Duration
+	persistenceFilepath string
+}
+
+// AllowListEntry defines a serializable entry for persisted allowlist items.
+type AllowListEntry struct {
+	IP     string     `json:"ip"`
+	Expiry *time.Time `json:"expiry,omitempty"`
 }
 
 // New creates a new Provider plugin.
@@ -45,12 +55,21 @@ func New(ctx context.Context, config *Config, name string) (*Provider, error) {
 		return nil, err
 	}
 
-	return &Provider{
-		serverAddr:    "",
-		allowList:     map[string]*time.Time{"127.0.0.1": nil},
-		allowListChan: make(chan string, 10),
-		expiration:    expiration,
-	}, nil
+	provider := &Provider{
+		serverAddr:          "",
+		allowList:           map[string]*time.Time{"127.0.0.1": nil},
+		allowListChan:       make(chan string, 10),
+		expiration:          expiration,
+		persistenceFilepath: config.PersistenceFilepath,
+	}
+
+	if provider.persistenceFilepath != "" {
+		if err := provider.loadAllowList(); err != nil {
+			return nil, err
+		}
+	}
+
+	return provider, nil
 }
 
 // Init the provider.
@@ -87,6 +106,10 @@ func (p *Provider) Provide(cfgChan chan<- json.Marshaler) error {
 			case ip := <-p.allowListChan:
 				expiryTime := time.Now().Add(p.expiration)
 				p.allowList[ip] = &expiryTime
+				err = p.persistAllowList()
+				if err != nil {
+					log.Printf("Error persisting allowlist: %v", err)
+				}
 
 			case <-ticker.C:
 				p.purgeExpiredIps()
@@ -107,6 +130,50 @@ func (p *Provider) purgeExpiredIps() {
 			delete(p.allowList, ip)
 		}
 	}
+	_ = p.persistAllowList()
+}
+
+func (p *Provider) loadAllowList() error {
+	data, err := os.ReadFile(p.persistenceFilepath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
+	var entries []AllowListEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return err
+	}
+
+	for _, e := range entries {
+		p.allowList[e.IP] = e.Expiry
+	}
+	return nil
+}
+
+func (p *Provider) persistAllowList() error {
+	_, _ = os.Stdout.WriteString("Persisting allowlist")
+	if p.persistenceFilepath == "" {
+		return nil
+	}
+
+	entries := make([]AllowListEntry, 0, len(p.allowList))
+	for ip, expiry := range p.allowList {
+		entries = append(entries, AllowListEntry{IP: ip, Expiry: expiry})
+	}
+
+	out, err := json.Marshal(entries)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(p.persistenceFilepath, out, 0o644)
 }
 
 func (p *Provider) startServer(ctx context.Context) error {
