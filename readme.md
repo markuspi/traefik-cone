@@ -7,7 +7,7 @@
 # Traefik Cone Plugin
 
 This plugin manages dynamic IP allowlists.
-IPs get allowlisted by browsing a configured (hidden) endpoint.# Traefik Cone Plugin
+IPs get allowlisted by browsing a configured (hidden) endpoint and are removed after a configurable expiration time.
 
 ## Installation
 
