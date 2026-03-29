@@ -38,6 +38,7 @@ You may restrict the route to a certain subpath or add authentication middleware
 http:
   routers:
     unlock-endpoint:
+      # define a hidden route to get whitelisted
       rule: "Host(`cone.example.com`) && Path(`/M9HcGYBm4C6KSTgCoZC1`)"
       service: "service@traefik-cone"
     
@@ -52,4 +53,4 @@ tcp:
       # ...
       middlewares:
         - "middleware@traefik-cone" 
-``
+```
