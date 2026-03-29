@@ -1,4 +1,13 @@
+<div align="center">
+
+  <img src="./.assets/icon.png" width="150" alt="Traefik Cone Plugin Icon">
+
+</div>
+
 # Traefik Cone Plugin
+
+This plugin manages dynamic IP allowlists.
+IPs get allowlisted by browsing a configured (hidden) endpoint.# Traefik Cone Plugin
 
 <div align="center">
 
