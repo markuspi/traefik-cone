@@ -17,7 +17,7 @@ experimental:
   plugins:
     traefik-cone:
       moduleName: "github.com/markuspi/traefik-cone"
-      version: "v1.0.0"
+      version: "v1.1.0"
 
 providers:
   plugin:
