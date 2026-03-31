@@ -28,9 +28,9 @@ providers:
 
 ## Usage
 
-- Create a router to expose the unlocking service `service@traefik-cone`.
+- Create a router to expose the unlocking service `service@plugin-traefik-cone`.
 You may restrict the route to a certain subpath or add authentication middlewares.
-- Add the HTTP or TCP middleware `middleware@traefik-cone` to the routes that you want to protect.
+- Add the HTTP or TCP middleware `middleware@plugin-traefik-cone` to the routes that you want to protect.
 - All IPs that browse the unlocking service are added to the allowlist and are granted access through the middleware.
 
 ``` yaml
@@ -40,17 +40,17 @@ http:
     unlock-endpoint:
       # define a hidden route to get whitelisted
       rule: "Host(`cone.example.com`) && Path(`/M9HcGYBm4C6KSTgCoZC1`)"
-      service: "service@traefik-cone"
+      service: "service@plugin-traefik-cone"
     
     protected-http-endpoint:
       # ...
       middlewares:
-        - "middleware@traefik-cone"
+        - "middleware@plugin-traefik-cone"
 
 tcp:
   routers:
     protected-tcp-endpoint:
       # ...
       middlewares:
-        - "middleware@traefik-cone" 
+        - "middleware@plugin-traefik-cone" 
 ```
